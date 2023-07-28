@@ -1,89 +1,36 @@
 const express = require("express");
 const cors = require("cors");
+const app = express();
+const bodyParser = require("body-parser");
 
 require("dotenv").config();
+const PORT = process.env.PORT || 5555;
 
-const app = express();
+const bookController = require("./controllers/books.js");
 
-var corsOptions = {
-  origin: "http://localhost:8080",
-};
+app.options("*", (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Authorization, Content-Length, X-Requested-With"
+  );
+  res.sendStatus(200);
+});
 
-app.use(cors(corsOptions));
-
-// parse requests of content-type - application/json
+app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: false }));
 
-// parse requests of content-type - application/x-www-form-urlencoded
-app.use(express.urlencoded({ extended: true }));
-
-// simple route
-app.get("/", (req, res) => {
-  res.json({ message: "Welcome to book application." });
+app.use((req, res, next) => {
+  next();
 });
 
-//routes
-const authRoutes = require("./routes/auth.routes.js");
-const userRoutes = require("./routes/user.routes.js");
-authRoutes(app);
-userRoutes(app);
+app.use("/books", bookController);
 
-// set port, listen for requests
-const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
+  console.log(`Server is listening on port ${PORT}`);
 });
 
-const db = require("./models");
-const Role = db.role;
-const dbConfig = require("./config/db.config.js");
-
-db.mongoose
-  .connect(dbConfig.DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log("Successfully connect to MongoDB.");
-    initial();
-  })
-  .catch((err) => {
-    console.error("Connection error", err);
-    process.exit();
-  });
-
-const initial = () => {
-  Role.estimatedDocumentCount((err, count) => {
-    if (!err && count === 0) {
-      new Role({
-        name: "user",
-      }).save((err) => {
-        if (err) {
-          console.log("error", err);
-        }
-
-        console.log("added 'user' to roles collection");
-      });
-
-      new Role({
-        name: "moderator",
-      }).save((err) => {
-        if (err) {
-          console.log("error", err);
-        }
-
-        console.log("added 'moderator' to roles collection");
-      });
-
-      new Role({
-        name: "admin",
-      }).save((err) => {
-        if (err) {
-          console.log("error", err);
-        }
-
-        console.log("added 'admin' to roles collection");
-      });
-    }
-  });
-};
+module.exports = app;
